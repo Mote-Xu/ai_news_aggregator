@@ -12,23 +12,45 @@ function strip(html: string): string {
 // ── RSS 源 ─────────────────────────────────────────
 const RSS_SOURCES = [
   'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml',
+  'https://feeds.arstechnica.com/arstechnica/index',
+  'https://www.engadget.com/rss.xml',
 ];
+
+// 通用科技站过滤 AI 相关
+const AI_RX = /AI\b|artificial.intelligence|OpenAI|ChatGPT|GPT-|Claude|Gemini|DeepSeek|Copilot|LLM|machine.learning|deep.learning|NVIDIA|neural/i;
+
+function sourceLabel(url: string): string {
+  if (url.includes('theverge')) return 'The Verge';
+  if (url.includes('arstechnica')) return 'Ars Technica';
+  if (url.includes('engadget')) return 'Engadget';
+  return 'Unknown';
+}
 
 function parseRSS(xml: string, srcUrl: string): RedditPost[] {
   const itemRegex = /<entry>([\s\S]*?)<\/entry>|<item>([\s\S]*?)<\/item>/g;
   const items: RedditPost[] = [];
   let match: RegExpExecArray | null;
+  const isAIOnly = !srcUrl.includes('theverge'); // Verge 已经是 AI 专区
+  const label = sourceLabel(srcUrl);
 
   while ((match = itemRegex.exec(xml)) !== null) {
     const block = match[1] || match[2];
+
     const title = strip(block.match(/<title[^>]*>([\s\S]*?)<\/title>/)?.[1] ?? '');
-    const link0 = block.match(/<link[^>]*href="([^"]*)"[^>]*\/?>/);
-    const link1 = block.match(/<link>([\s\S]*?)<\/link>/);
-    const link = strip(link0?.[1] ?? link1?.[1] ?? '');
+
+    // link: Atom self-closing 或 RSS 2.0 包裹
+    const href = block.match(/<link[^>]*href="([^"]*)"[^>]*\/?>/);
+    const inner = block.match(/<link>([\s\S]*?)<\/link>/);
+    const link = strip(href?.[1] ?? inner?.[1] ?? '');
+
+    // body: 优先 content:encoded，然后 description，最后 Atom content
     const desc = strip(
+      block.match(/<content:encoded[^>]*>([\s\S]*?)<\/content:encoded>/)?.[1] ??
       block.match(/<description>([\s\S]*?)<\/description>/)?.[1] ??
       block.match(/<content[^>]*>([\s\S]*?)<\/content>/)?.[1] ?? ''
     );
+
+    // date
     const pubDate = (
       block.match(/<published>([\s\S]*?)<\/published>/)?.[1] ??
       block.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1] ??
@@ -36,12 +58,13 @@ function parseRSS(xml: string, srcUrl: string): RedditPost[] {
     ).trim();
 
     if (title && link) {
+      if (isAIOnly && !AI_RX.test(title + desc)) continue;
       items.push({
         id: link,
         title,
         body: desc,
         url: link,
-        author: 'The Verge',
+        author: label,
         score: 0,
         comments: 0,
         created: pubDate || new Date().toISOString(),
