@@ -21,8 +21,10 @@
 - ✅ Expo TypeScript 项目已创建
 - ✅ AI News Aggregator V2 实现完成（arxiv API + FlatList + 深色模式 + 详情弹窗）
 - ✅ TypeScript 零编译错误
-- ✅ Metro Bundler 启动正常
-- ❌ 手机 Expo Go 未装、未验证扫码调试
+- ✅ Metro Bundler + Expo Go 扫码调试已跑通
+- ✅ GitHub 仓库：Mote-Xu/ai_news_aggregator
+- ✅ EAS 云构建配置（preview APK）+ GitHub Actions 手动触发
+- 🔄 首次 EAS 云构建排队中
 - ❌ Node 版本警告未消除
 
 ## 已实现功能（V2）
@@ -39,14 +41,23 @@
 ## 项目结构
 
 ```
-contexts/ThemeContext.tsx   # ThemeProvider + useTheme（深色/浅色调色板）
-types/arxiv.ts              # ArxivEntry 接口
-services/arxivApi.ts        # fetch + XML 解析 + 日期格式化
-components/NewsCard.tsx     # 新闻卡片组件（主题感知）
-components/PaperModal.tsx   # 论文详情弹窗
-screens/HomeScreen.tsx      # 主页面（FlatList + useState/useEffect/Modal）
-App.tsx                     # 入口 → ThemeProvider + StatusBar + HomeScreen
+.github/workflows/eas-build.yml  # GitHub Actions 手动触发 EAS 构建
+eas.json                          # EAS 构建配置（preview = APK）
+contexts/ThemeContext.tsx          # ThemeProvider + useTheme（深色/浅色调色板）
+types/arxiv.ts                     # ArxivEntry 接口
+services/arxivApi.ts               # fetch + XML 解析 + 日期格式化
+components/NewsCard.tsx            # 新闻卡片组件（主题感知）
+components/PaperModal.tsx          # 论文详情弹窗
+screens/HomeScreen.tsx             # 主页面（FlatList + useState/useEffect/Modal）
+App.tsx                            # 入口 → ThemeProvider + StatusBar + HomeScreen
 ```
+
+## 部署说明
+
+- **EAS 项目**: @mote-xu/Mobile_Dev（slug，projectId 连接）
+- **app.json**: name="AI News Aggregator"（手机显示名），slug="Mobile_Dev"（EAS 内部 ID）
+- **构建方式**: `npx eas build --platform android --profile preview` 或 GitHub Actions 手动触发
+- **免费额度**: 每月 30 次构建
 
 ## 硬件约束
 
@@ -64,7 +75,6 @@ App.tsx                     # 入口 → ThemeProvider + StatusBar + HomeScreen
 
 ## 当前卡点 & 请 AI 给方向
 
-1. **真机验证**：还没在 HarmonyOS 手机上通过 Expo Go 验证
-2. **Node 升级**：npm 很多 EBADENGINE 警告——建议直接升 22.x LTS 还是 20.19.4？
+1. **首次 APK 安装**：EAS 构建完成后在 HarmonyOS 真机上安装验证
+2. **Node 升级**：EBADENGINE 警告——建议直接升 22.x LTS 还是 20.19.4？不影响开发但影响构建速度
 3. **下一个迭代方向**：书签收藏 / 多数据源 / 搜索筛选，先做哪个？
-4. **V2 新增技术**：ThemeContext (Context API) 深色模式、Modal 详情弹窗——这些模式是否合理？

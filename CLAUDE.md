@@ -1,18 +1,22 @@
-# Mobile_Dev — 移动端开发
+# AI News Aggregator — 移动端 AI 论文速递
 
-> React Native (Expo) + TypeScript 移动端开发项目
-> 创建：2026-06-13
+> React Native (Expo) + TypeScript
+> 创建：2026-06-13 | GitHub: [Mote-Xu/ai_news_aggregator](https://github.com/Mote-Xu/ai_news_aggregator)
+> EAS: @mote-xu/Mobile_Dev | 构建状态: 排队中
 
 ## 架构
 
 ```
 Mobile_Dev/
-├── App.tsx                  # 应用入口组件 → 引入 HomeScreen
+├── .github/workflows/
+│   └── eas-build.yml        # GitHub Actions 手动触发 EAS 构建
+├── App.tsx                  # 应用入口 → ThemeProvider + HomeScreen
 ├── index.ts                 # 注册根组件
-├── app.json                 # Expo 配置
+├── app.json                 # Expo 配置（name: AI News Aggregator, slug: Mobile_Dev）
+├── eas.json                 # EAS 构建配置（preview = APK）
 ├── package.json             # 依赖 & scripts
-├── tsconfig.json            # TypeScript 配置
-├── assets/                  # 图片、字体等静态资源
+├── tsconfig.json            # TypeScript 配置（严格模式）
+├── assets/                  # 图标等静态资源
 ├── contexts/
 │   └── ThemeContext.tsx     # 深色/浅色主题 Context + useTheme
 ├── types/
@@ -43,10 +47,25 @@ Mobile_Dev/
 ## 运行命令
 
 ```bash
-npx expo start           # 启动开发服务器
+npx expo start           # 启动开发服务器（Expo Go 扫码调试）
 npx expo start --android # Android 模式
 npx expo start --web     # Web 模式
 ```
+
+## 构建部署
+
+```bash
+# 手动触发 EAS 云构建（生成 APK）
+npx eas build --platform android --profile preview
+
+# 或通过 GitHub Actions 手动触发
+# https://github.com/Mote-Xu/ai_news_aggregator/actions → EAS Build → Run workflow
+```
+
+- **EAS 项目**: @mote-xu/Mobile_Dev（slug 不变，projectId 连接）
+- **构建配置**: eas.json → preview profile → APK
+- **自动构建**: GitHub Actions workflow_dispatch（手动触发，不浪费月度额度）
+- **额度**: 免费每月 30 次构建
 
 ## 当前功能
 
@@ -87,10 +106,13 @@ npx expo start --web     # Web 模式
 ## 待办
 
 - [ ] 升级 Node.js 到 22.x LTS（当前 20.15.1 能跑但有 EBADENGINE 警告）
-- [ ] 手机安装 Expo Go，验证扫码调试
+- [x] 手机安装 Expo Go，验证扫码调试 ✅（已跑通）
 - [x] 确定第一个 App 项目方向 → AI News Aggregator
 - [x] 迁移旧 Mobile_Development 目录中的 PhoneCleanup 残留（无残留，跳过）
 - [x] 实现 AI 新闻列表（arxiv API + FlatList + AsyncStorage 缓存）
 - [x] 深色模式（ThemeContext + useColorScheme 自动跟随系统）
 - [x] 详情弹窗（Modal 替代浏览器跳转）
+- [x] EAS 云构建配置（eas.json + APK 构建）
+- [x] GitHub Actions 自动构建 workflow（手动触发）
+- [ ] 下载 APK 安装到手机（首次构建进行中）
 - [ ] 后续：书签收藏 / 多数据源 / 搜索筛选

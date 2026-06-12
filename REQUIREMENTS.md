@@ -1,9 +1,9 @@
 # Mobile_Dev — 需求文档
 
 > React Native (Expo) + TypeScript 移动端开发
-> 创建：2026-06-13 | 状态：V2 已实现（深色模式 + 详情弹窗）
+> 创建：2026-06-13 | 状态：V2 + EAS 构建中
 
-## 当前阶段：V2 完成，待真机验证
+## 当前阶段：等待首次 APK，待真机安装验证
 
 ### F0: 开发环境
 
@@ -11,8 +11,10 @@
 - [x] Expo 56 + React Native 0.85 + React 19 + TypeScript 6
 - [x] VS Code 1.123.0
 - [ ] Node.js 升级到 22.x LTS
-- [ ] 手机安装 Expo Go 验证真机调试
-- [x] Git 仓库初始化
+- [x] 手机安装 Expo Go 验证真机调试
+- [x] Git 仓库初始化 → GitHub: Mote-Xu/ai_news_aggregator
+- [x] EAS 云构建配置（eas.json + preview APK）
+- [x] GitHub Actions 自动构建 workflow（手动触发）
 
 ### F1: AI News Aggregator ✅
 
@@ -23,7 +25,8 @@
 - [x] 深色模式（ThemeContext + useColorScheme 自动跟随系统）
 - [x] AsyncStorage 本地缓存（离线降级）
 - [x] TypeScript 零错误编译
-- [ ] 真机验证
+- [x] EAS 云构建 APK（首次构建排队中）
+- [ ] APK 安装到真机验证
 
 ### F2: 后续迭代
 
