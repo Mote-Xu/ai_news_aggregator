@@ -15,14 +15,16 @@ import NewsItemCard from '../components/NewsItemCard';
 import PaperModal from '../components/PaperModal';
 import { fetchLatestPapers } from '../services/arxivApi';
 import { fetchAINews } from '../services/newsApi';
+import { fetchChineseNews } from '../services/chineseNewsApi';
 import { ArxivEntry } from '../types/arxiv';
 import { RedditPost } from '../types/news';
 import { useTheme } from '../contexts/ThemeContext';
 
 const CACHE_PAPERS = '@cache_papers';
 const CACHE_NEWS = '@cache_news';
+const CACHE_CHINESE = '@cache_chinese';
 
-type Tab = 'papers' | 'news';
+type Tab = 'papers' | 'news' | 'chinese';
 
 export default function HomeScreen() {
   const { colors } = useTheme();
@@ -82,6 +84,34 @@ export default function HomeScreen() {
     }
   }, [tab, news.length, newsLoading, newsError, loadNews]);
 
+  // ── Chinese News ────────────────────────────────
+  const [chinese, setChinese] = useState<RedditPost[]>([]);
+  const [chineseLoading, setChineseLoading] = useState(false);
+  const [chineseError, setChineseError] = useState<string | null>(null);
+
+  const loadChinese = useCallback(async () => {
+    try {
+      setChineseError(null);
+      setChineseLoading(true);
+      const data = await fetchChineseNews();
+      setChinese(data);
+      await AsyncStorage.setItem(CACHE_CHINESE, JSON.stringify(data));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '未知错误';
+      setChineseError(msg);
+      const cached = await AsyncStorage.getItem(CACHE_CHINESE);
+      if (cached) setChinese(JSON.parse(cached));
+    } finally {
+      setChineseLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (tab === 'chinese' && chinese.length === 0 && !chineseLoading && !chineseError) {
+      loadChinese();
+    }
+  }, [tab, chinese.length, chineseLoading, chineseError, loadChinese]);
+
   // ── Handlers ────────────────────────────────────
   const handlePaperPress = useCallback((entry: ArxivEntry) => {
     setSelectedEntry(entry);
@@ -95,6 +125,7 @@ export default function HomeScreen() {
   const TABS: { key: Tab; label: string }[] = [
     { key: 'papers', label: '📄 论文' },
     { key: 'news', label: '📰 新闻' },
+    { key: 'chinese', label: '🇨🇳 中文' },
   ];
 
   const tabBar = (
@@ -130,8 +161,9 @@ export default function HomeScreen() {
   );
 
   const isLoading = (tab === 'papers' && papersLoading) ||
-    (tab === 'news' && newsLoading && news.length === 0);
-  if (isLoading) return loadingView(tab === 'papers' ? '正在获取最新 AI 论文...' : '正在获取 AI 新闻...');
+    (tab === 'news' && newsLoading && news.length === 0) ||
+    (tab === 'chinese' && chineseLoading && chinese.length === 0);
+  if (isLoading) return loadingView(tab === 'papers' ? '正在获取最新 AI 论文...' : tab === 'news' ? '正在获取 AI 新闻...' : '正在获取中文 AI 动态...');
 
   // ── Error ───────────────────────────────────────
   function header() {
@@ -139,7 +171,7 @@ export default function HomeScreen() {
       <View style={[styles.header, { backgroundColor: colors.headerBg, borderBottomColor: colors.headerBorder }]}>
         <Text style={[styles.headerTitle, { color: colors.title }]}>AI News Aggregator</Text>
         <Text style={[styles.headerSub, { color: colors.subtitle }]}>
-          {tab === 'papers' ? 'arxiv.org · cs.AI' : 'Hacker News · AI 相关'}
+          {tab === 'papers' ? 'arxiv.org · cs.AI' : tab === 'news' ? 'Hacker News · AI 相关' : '机器之心 · 量子位'}
         </Text>
       </View>
     );
@@ -179,7 +211,7 @@ export default function HomeScreen() {
             }
           />
         )
-      ) : (
+      ) : tab === 'news' ? (
         newsError && news.length === 0 ? errorView(newsError) : (
           <FlatList
             data={news}
@@ -188,6 +220,18 @@ export default function HomeScreen() {
             contentContainerStyle={styles.list}
             refreshControl={
               <RefreshControl refreshing={newsLoading} onRefresh={() => loadNews()} colors={[colors.accent]} tintColor={colors.accent} />
+            }
+          />
+        )
+      ) : (
+        chineseError && chinese.length === 0 ? errorView(chineseError) : (
+          <FlatList
+            data={chinese}
+            renderItem={({ item }) => <NewsItemCard post={item} onPress={handleNewsPress} />}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.list}
+            refreshControl={
+              <RefreshControl refreshing={chineseLoading} onRefresh={() => loadChinese()} colors={[colors.accent]} tintColor={colors.accent} />
             }
           />
         )
