@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "AI News Aggregator",
-    "slug": "Mobile_Dev",
+    "slug": "ai_news_aggregator",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
