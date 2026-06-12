@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Linking,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
@@ -9,187 +11,217 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NewsCard from '../components/NewsCard';
+import NewsItemCard from '../components/NewsItemCard';
 import PaperModal from '../components/PaperModal';
 import { fetchLatestPapers } from '../services/arxivApi';
+import { fetchAINews } from '../services/newsApi';
 import { ArxivEntry } from '../types/arxiv';
+import { RedditPost } from '../types/news';
 import { useTheme } from '../contexts/ThemeContext';
 
-const CACHE_KEY = '@ai_news_cache';
+const CACHE_PAPERS = '@cache_papers';
+const CACHE_NEWS = '@cache_news';
+
+type Tab = 'papers' | 'news';
 
 export default function HomeScreen() {
   const { colors } = useTheme();
+  const [tab, setTab] = useState<Tab>('papers');
 
-  const [entries, setEntries] = useState<ArxivEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // 详情弹窗状态
+  // Papers
+  const [papers, setPapers] = useState<ArxivEntry[]>([]);
+  const [papersLoading, setPapersLoading] = useState(true);
+  const [papersError, setPapersError] = useState<string | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<ArxivEntry | null>(null);
 
-  const loadData = useCallback(async (isRefresh = false) => {
+  // News
+  const [news, setNews] = useState<RedditPost[]>([]);
+  const [newsLoading, setNewsLoading] = useState(false);
+  const [newsError, setNewsError] = useState<string | null>(null);
+
+  // ── Papers ──────────────────────────────────────
+  const loadPapers = useCallback(async (isRefresh = false) => {
     try {
-      setError(null);
-      if (isRefresh) setRefreshing(true);
-
-      const papers = await fetchLatestPapers();
-      setEntries(papers);
-
-      await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(papers));
+      setPapersError(null);
+      const data = await fetchLatestPapers();
+      setPapers(data);
+      await AsyncStorage.setItem(CACHE_PAPERS, JSON.stringify(data));
     } catch (e) {
-      const message = e instanceof Error ? e.message : '未知错误';
-      setError(message);
-
-      try {
-        const cached = await AsyncStorage.getItem(CACHE_KEY);
-        if (cached) {
-          setEntries(JSON.parse(cached) as ArxivEntry[]);
-        }
-      } catch {
-        // 缓存不可用则忽略
-      }
+      const msg = e instanceof Error ? e.message : '未知错误';
+      setPapersError(msg);
+      const cached = await AsyncStorage.getItem(CACHE_PAPERS);
+      if (cached) setPapers(JSON.parse(cached));
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      setPapersLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadPapers(); }, [loadPapers]);
+
+  // ── News ────────────────────────────────────────
+  const loadNews = useCallback(async (isRefresh = false) => {
+    try {
+      setNewsError(null);
+      if (isRefresh) setNewsLoading(true);
+      const data = await fetchAINews();
+      setNews(data);
+      await AsyncStorage.setItem(CACHE_NEWS, JSON.stringify(data));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '未知错误';
+      setNewsError(msg);
+      const cached = await AsyncStorage.getItem(CACHE_NEWS);
+      if (cached) setNews(JSON.parse(cached));
+    } finally {
+      setNewsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (tab === 'news' && news.length === 0 && !newsLoading && !newsError) {
+      setNewsLoading(true);
+      loadNews();
+    }
+  }, [tab, news.length, newsLoading, newsError, loadNews]);
 
-  const handlePress = useCallback((entry: ArxivEntry) => {
+  // ── Handlers ────────────────────────────────────
+  const handlePaperPress = useCallback((entry: ArxivEntry) => {
     setSelectedEntry(entry);
   }, []);
 
-  const renderItem = useCallback(
-    ({ item }: { item: ArxivEntry }) => (
-      <NewsCard entry={item} onPress={handlePress} />
-    ),
-    [handlePress],
+  const handleNewsPress = useCallback((post: RedditPost) => {
+    Linking.openURL(post.url).catch(() => {});
+  }, []);
+
+  // ── Tab bar ─────────────────────────────────────
+  const TABS: { key: Tab; label: string }[] = [
+    { key: 'papers', label: '📄 论文' },
+    { key: 'news', label: '📰 新闻' },
+  ];
+
+  const tabBar = (
+    <View style={[styles.tabBar, { backgroundColor: colors.headerBg, borderBottomColor: colors.headerBorder }]}>
+      {TABS.map(t => (
+        <Pressable
+          key={t.key}
+          onPress={() => setTab(t.key)}
+          style={[
+            styles.tab,
+            tab === t.key && { borderBottomColor: colors.accent, borderBottomWidth: 2 },
+          ]}
+        >
+          <Text style={[
+            styles.tabText,
+            { color: tab === t.key ? colors.accent : colors.meta },
+          ]}>{t.label}</Text>
+        </Pressable>
+      ))}
+    </View>
   );
 
-  const keyExtractor = useCallback((item: ArxivEntry) => item.id, []);
-
-  // 首次加载中
-  if (loading) {
+  // ── Loading ─────────────────────────────────────
+  if (papersLoading && tab === 'papers') {
     return (
-      <View style={[styles.center, { backgroundColor: colors.bg }]}>
-        <ActivityIndicator size="large" color={colors.accent} />
-        <Text style={[styles.loadingText, { color: colors.meta }]}>
-          正在获取最新 AI 论文...
-        </Text>
+      <View style={[styles.container, { backgroundColor: colors.bg }]}>
+        {header()}
+        {tabBar}
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={colors.accent} />
+          <Text style={[styles.loadingText, { color: colors.meta }]}>加载中...</Text>
+        </View>
       </View>
     );
   }
 
-  // 出错且无缓存
-  if (error && entries.length === 0) {
+  // ── Error ───────────────────────────────────────
+  function header() {
     return (
-      <View style={[styles.center, { backgroundColor: colors.bg }]}>
-        <Text style={styles.errorIcon}>😵</Text>
-        <Text style={[styles.errorText, { color: colors.errorTitle }]}>加载失败</Text>
-        <Text style={[styles.errorDetail, { color: colors.errorDetail }]}>{error}</Text>
-        <Text style={[styles.retryHint, { color: colors.accent }]}>下拉刷新重试</Text>
-      </View>
-    );
-  }
-
-  return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      {/* header */}
-      <View style={[styles.header, {
-        backgroundColor: colors.headerBg,
-        borderBottomColor: colors.headerBorder,
-      }]}>
+      <View style={[styles.header, { backgroundColor: colors.headerBg, borderBottomColor: colors.headerBorder }]}>
         <Text style={[styles.headerTitle, { color: colors.title }]}>AI News Aggregator</Text>
         <Text style={[styles.headerSub, { color: colors.subtitle }]}>
-          arxiv.org · cs.AI 最新提交
+          {tab === 'papers' ? 'arxiv.org · cs.AI' : 'Reddit · r/artificial+r/MachineLearning'}
         </Text>
       </View>
+    );
+  }
 
-      {/* list */}
-      <FlatList
-        data={entries}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
-        contentContainerStyle={styles.list}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => loadData(true)}
-            colors={[colors.accent]}
-            tintColor={colors.accent}
+  const errorView = (msg: string) => (
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+      {header()}
+      {tabBar}
+      <View style={styles.center}>
+        <Text style={styles.errorIcon}>😵</Text>
+        <Text style={[styles.errorText, { color: colors.errorTitle }]}>加载失败</Text>
+        <Text style={[styles.errorDetail, { color: colors.errorDetail }]}>{msg}</Text>
+        <Text style={[styles.retryHint, { color: colors.accent }]}>下拉刷新重试</Text>
+      </View>
+    </View>
+  );
+
+  // ── Render ──────────────────────────────────────
+  return (
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+      {header()}
+      {tabBar}
+
+      {tab === 'papers' ? (
+        papersError && papers.length === 0 ? errorView(papersError) : (
+          <FlatList
+            data={papers}
+            renderItem={({ item }) => <NewsCard entry={item} onPress={handlePaperPress} />}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.list}
+            refreshControl={
+              <RefreshControl refreshing={false} onRefresh={() => {
+                setPapersLoading(true);
+                loadPapers();
+              }} colors={[colors.accent]} tintColor={colors.accent} />
+            }
           />
-        }
-        ListEmptyComponent={
-          <View style={styles.center}>
-            <Text style={[styles.emptyText, { color: colors.meta }]}>暂无数据</Text>
-          </View>
-        }
-      />
+        )
+      ) : (
+        newsError && news.length === 0 ? errorView(newsError) : (
+          <FlatList
+            data={news}
+            renderItem={({ item }) => <NewsItemCard post={item} onPress={handleNewsPress} />}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.list}
+            refreshControl={
+              <RefreshControl refreshing={newsLoading} onRefresh={() => loadNews()} colors={[colors.accent]} tintColor={colors.accent} />
+            }
+          />
+        )
+      )}
 
-      {/* detail modal */}
-      <PaperModal
-        visible={selectedEntry !== null}
-        entry={selectedEntry}
-        onClose={() => setSelectedEntry(null)}
-      />
+      <PaperModal visible={selectedEntry !== null} entry={selectedEntry} onClose={() => setSelectedEntry(null)} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
+  container: { flex: 1 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   header: {
     paddingTop: 56,
     paddingBottom: 12,
     paddingHorizontal: 20,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
+  headerTitle: { fontSize: 22, fontWeight: '700' },
+  headerSub: { fontSize: 12, marginTop: 2 },
+  tabBar: {
+    flexDirection: 'row',
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  headerSub: {
-    fontSize: 12,
-    marginTop: 2,
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
   },
-  list: {
-    paddingVertical: 8,
-    paddingBottom: 24,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-  },
-  errorIcon: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
-  errorText: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  errorDetail: {
-    fontSize: 13,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  retryHint: {
-    fontSize: 13,
-  },
-  emptyText: {
-    fontSize: 15,
-    marginTop: 80,
-  },
+  tabText: { fontSize: 14, fontWeight: '500' },
+  list: { paddingVertical: 8, paddingBottom: 24 },
+  loadingText: { marginTop: 12, fontSize: 14 },
+  errorIcon: { fontSize: 48, marginBottom: 12 },
+  errorText: { fontSize: 18, fontWeight: '600', marginBottom: 4 },
+  errorDetail: { fontSize: 13, textAlign: 'center', marginBottom: 16 },
+  retryHint: { fontSize: 13 },
 });
