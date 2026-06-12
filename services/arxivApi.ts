@@ -1,7 +1,13 @@
 import { ArxivEntry } from '../types/arxiv';
 
-const ARXIV_API_URL =
-  'https://export.arxiv.org/api/query?search_query=cat:cs.AI&sortBy=submittedDate&sortOrder=descending&max_results=20';
+const BASE = 'https://export.arxiv.org/api/query?sortBy=submittedDate&sortOrder=descending&max_results=20';
+export const CATEGORIES = [
+  { key: 'cs.AI', label: 'AI' },
+  { key: 'cs.CV', label: 'CV' },
+  { key: 'cs.CL', label: 'NLP' },
+  { key: 'cs.LG', label: 'ML' },
+  { key: 'cs.RO', label: 'Robotics' },
+];
 
 /** 去除 HTML 标签和多余空白 */
 function stripHtml(html: string): string {
@@ -44,14 +50,13 @@ export function formatDate(iso: string): string {
 }
 
 /** 获取最新 AI 论文 */
-export async function fetchLatestPapers(): Promise<ArxivEntry[]> {
+export async function fetchLatestPapers(category = 'cs.AI'): Promise<ArxivEntry[]> {
+  const url = `${BASE}&search_query=cat:${category}`;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20000);
 
   try {
-    const response = await fetch(ARXIV_API_URL, {
-      signal: controller.signal,
-    });
+    const response = await fetch(url, { signal: controller.signal });
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);

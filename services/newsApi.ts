@@ -1,32 +1,58 @@
 import { RedditPost } from '../types/news';
 
-interface RedditChild {
-  data: {
-    id: string;
-    title: string;
-    selftext: string;
-    url: string;
-    author: string;
-    score: number;
-    num_comments: number;
-    created_utc: number;
-    permalink: string;
-  };
+/** CDATA 剥离 + HTML 移除 + 空白压缩 */
+function strip(html: string): string {
+  return html
+    .replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1')
+    .replace(/<[^>]*>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
-interface RedditResponse {
-  data: {
-    children: RedditChild[];
-  };
-}
-
-// Reddit 国内可能被墙，改为用 rss2json 转换 Google News AI 源
-// 或直接从 Hacker News 取（部分可用）
-const SOURCES = [
-  // Hacker News 搜索 AI → JSON API
-  'https://hn.algolia.com/api/v1/search_by_date?query=AI&tags=story&hitsPerPage=20',
+// ── RSS 源 ─────────────────────────────────────────
+const RSS_SOURCES = [
+  'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml',
 ];
 
+function parseRSS(xml: string, srcUrl: string): RedditPost[] {
+  const itemRegex = /<entry>([\s\S]*?)<\/entry>|<item>([\s\S]*?)<\/item>/g;
+  const items: RedditPost[] = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = itemRegex.exec(xml)) !== null) {
+    const block = match[1] || match[2];
+    const title = strip(block.match(/<title[^>]*>([\s\S]*?)<\/title>/)?.[1] ?? '');
+    const link0 = block.match(/<link[^>]*href="([^"]*)"[^>]*\/?>/);
+    const link1 = block.match(/<link>([\s\S]*?)<\/link>/);
+    const link = strip(link0?.[1] ?? link1?.[1] ?? '');
+    const desc = strip(
+      block.match(/<description>([\s\S]*?)<\/description>/)?.[1] ??
+      block.match(/<content[^>]*>([\s\S]*?)<\/content>/)?.[1] ?? ''
+    );
+    const pubDate = (
+      block.match(/<published>([\s\S]*?)<\/published>/)?.[1] ??
+      block.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1] ??
+      ''
+    ).trim();
+
+    if (title && link) {
+      items.push({
+        id: link,
+        title,
+        body: desc,
+        url: link,
+        author: 'The Verge',
+        score: 0,
+        comments: 0,
+        created: pubDate || new Date().toISOString(),
+        permalink: link,
+      });
+    }
+  }
+  return items;
+}
+
+// ── HN JSON API (fallback) ─────────────────────────
 interface HNResult {
   objectID: string;
   title: string;
@@ -38,11 +64,9 @@ interface HNResult {
   story_text: string | null;
 }
 
-interface HNResponse {
-  hits: HNResult[];
-}
+interface HNResponse { hits: HNResult[]; }
 
-function toPost(hit: HNResult): RedditPost {
+function toHNPost(hit: HNResult): RedditPost {
   return {
     id: hit.objectID,
     title: hit.title,
@@ -56,30 +80,38 @@ function toPost(hit: HNResult): RedditPost {
   };
 }
 
+// ── 主入口 ─────────────────────────────────────────
 export async function fetchAINews(): Promise<RedditPost[]> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
 
   try {
-    const response = await fetch(SOURCES[0], {
-      headers: { 'User-Agent': 'AI_News_Aggregator/1.0' },
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+    // 1) The Verge RSS
+    for (const url of RSS_SOURCES) {
+      try {
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) continue;
+        const xml = await res.text();
+        const items = parseRSS(xml, url);
+        if (items.length > 0) { clearTimeout(timeout); return items; }
+      } catch { continue; }
     }
 
-    const json = (await response.json()) as HNResponse;
-
-    if (!json.hits?.length) {
-      throw new Error('无新闻数据');
+    // 2) HN fallback
+    const hnRes = await fetch(
+      'https://hn.algolia.com/api/v1/search_by_date?query=AI&tags=story&hitsPerPage=20',
+      { signal: controller.signal }
+    );
+    if (hnRes.ok) {
+      const json = (await hnRes.json()) as HNResponse;
+      if (json.hits?.length) {
+        clearTimeout(timeout);
+        return json.hits.filter(h => h.title).map(toHNPost)
+          .sort((a, b) => b.score - a.score);
+      }
     }
 
-    return json.hits
-      .filter(h => h.title)
-      .map(toPost)
-      .sort((a, b) => b.score - a.score);
+    throw new Error('所有新闻源不可用');
   } finally {
     clearTimeout(timeout);
   }

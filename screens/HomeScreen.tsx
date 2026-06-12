@@ -13,7 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import NewsCard from '../components/NewsCard';
 import NewsItemCard from '../components/NewsItemCard';
 import PaperModal from '../components/PaperModal';
-import { fetchLatestPapers } from '../services/arxivApi';
+import { fetchLatestPapers, CATEGORIES } from '../services/arxivApi';
 import { fetchAINews } from '../services/newsApi';
 import { fetchChineseNews } from '../services/chineseNewsApi';
 import { ArxivEntry } from '../types/arxiv';
@@ -34,6 +34,7 @@ export default function HomeScreen() {
   const [papers, setPapers] = useState<ArxivEntry[]>([]);
   const [papersLoading, setPapersLoading] = useState(true);
   const [papersError, setPapersError] = useState<string | null>(null);
+  const [paperCategory, setPaperCategory] = useState('cs.AI');
   const [selectedEntry, setSelectedEntry] = useState<ArxivEntry | null>(null);
 
   // News
@@ -42,10 +43,11 @@ export default function HomeScreen() {
   const [newsError, setNewsError] = useState<string | null>(null);
 
   // ── Papers ──────────────────────────────────────
-  const loadPapers = useCallback(async (isRefresh = false) => {
+  const loadPapers = useCallback(async (category: string) => {
     try {
       setPapersError(null);
-      const data = await fetchLatestPapers();
+      setPapersLoading(true);
+      const data = await fetchLatestPapers(category);
       setPapers(data);
       await AsyncStorage.setItem(CACHE_PAPERS, JSON.stringify(data));
     } catch (e) {
@@ -58,7 +60,7 @@ export default function HomeScreen() {
     }
   }, []);
 
-  useEffect(() => { loadPapers(); }, [loadPapers]);
+  useEffect(() => { loadPapers(paperCategory); }, [paperCategory, loadPapers]);
 
   // ── News ────────────────────────────────────────
   const loadNews = useCallback(async () => {
@@ -171,7 +173,7 @@ export default function HomeScreen() {
       <View style={[styles.header, { backgroundColor: colors.headerBg, borderBottomColor: colors.headerBorder }]}>
         <Text style={[styles.headerTitle, { color: colors.title }]}>AI News Aggregator</Text>
         <Text style={[styles.headerSub, { color: colors.subtitle }]}>
-          {tab === 'papers' ? 'arxiv.org · cs.AI' : tab === 'news' ? 'Hacker News · AI 相关' : '36氪 · IT之家'}
+          {tab === 'papers' ? `arxiv.org · ${paperCategory}` : tab === 'news' ? 'The Verge · HN' : '36氪 · IT之家'}
         </Text>
       </View>
     );
@@ -190,11 +192,34 @@ export default function HomeScreen() {
     </View>
   );
 
+  // ── Category chips (papers only) ────────────────
+  const categoryBar = tab === 'papers' && (
+    <View style={[styles.catBar, { backgroundColor: colors.headerBg }]}>
+      {CATEGORIES.map(c => (
+        <Pressable
+          key={c.key}
+          onPress={() => setPaperCategory(c.key)}
+          style={[
+            styles.catChip,
+            { borderColor: paperCategory === c.key ? colors.accent : colors.headerBorder },
+            paperCategory === c.key && { backgroundColor: colors.accent },
+          ]}
+        >
+          <Text style={[
+            styles.catText,
+            { color: paperCategory === c.key ? '#fff' : colors.meta },
+          ]}>{c.label}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+
   // ── Render ──────────────────────────────────────
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       {header()}
       {tabBar}
+      {categoryBar}
 
       {tab === 'papers' ? (
         papersError && papers.length === 0 ? errorView(papersError) : (
@@ -204,10 +229,7 @@ export default function HomeScreen() {
             keyExtractor={item => item.id}
             contentContainerStyle={styles.list}
             refreshControl={
-              <RefreshControl refreshing={papersLoading} onRefresh={() => {
-                setPapersLoading(true);
-                loadPapers();
-              }} colors={[colors.accent]} tintColor={colors.accent} />
+              <RefreshControl refreshing={papersLoading} onRefresh={() => loadPapers(paperCategory)} colors={[colors.accent]} tintColor={colors.accent} />
             }
           />
         )
@@ -263,6 +285,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabText: { fontSize: 14, fontWeight: '500' },
+  catBar: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  catChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  catText: { fontSize: 13, fontWeight: '500' },
   list: { paddingVertical: 8, paddingBottom: 24 },
   loadingText: { marginTop: 12, fontSize: 14 },
   errorIcon: { fontSize: 48, marginBottom: 12 },
