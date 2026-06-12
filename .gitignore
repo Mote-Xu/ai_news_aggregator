@@ -9,6 +9,9 @@ dist/
 web-build/
 expo-env.d.ts
 
+# Build artifacts
+*.apk
+
 # Native
 .kotlin/
 *.orig.*
