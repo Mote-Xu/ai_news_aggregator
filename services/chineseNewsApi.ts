@@ -1,9 +1,9 @@
 import { RedditPost } from '../types/news';
 
-// 多个中文 AI 新闻源，哪个通就用哪个
+// 中文科技新闻源（RSS → XML 解析）
 const SOURCES = [
-  'https://www.jiqizhixin.com/rss',
-  'https://www.qbitai.com/feed',
+  'https://36kr.com/feed',
+  'https://www.ithome.com/rss/',
 ];
 
 /** 去除 HTML 和多余空白 */
@@ -11,11 +11,18 @@ function strip(html: string): string {
   return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 }
 
+function sourceName(url: string): string {
+  if (url.includes('36kr')) return '36氪';
+  if (url.includes('ithome')) return 'IT之家';
+  return '中文科技';
+}
+
 /** 解析 RSS XML */
-function parseRSS(xml: string): RedditPost[] {
+function parseRSS(xml: string, srcUrl: string): RedditPost[] {
   const itemRegex = /<item>([\s\S]*?)<\/item>/g;
   const items: RedditPost[] = [];
   let match: RegExpExecArray | null;
+  const src = sourceName(srcUrl);
 
   while ((match = itemRegex.exec(xml)) !== null) {
     const block = match[1];
@@ -30,7 +37,7 @@ function parseRSS(xml: string): RedditPost[] {
         title,
         body: desc,
         url: link,
-        author: '机器之心',
+        author: src,
         score: 0,
         comments: 0,
         created: pubDate || new Date().toISOString(),
@@ -57,7 +64,7 @@ export async function fetchChineseNews(): Promise<RedditPost[]> {
       if (!response.ok) continue;
 
       const xml = await response.text();
-      const items = parseRSS(xml);
+      const items = parseRSS(xml, url);
 
       if (items.length > 0) {
         clearTimeout(timeout);

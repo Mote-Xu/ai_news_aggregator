@@ -171,7 +171,7 @@ export default function HomeScreen() {
       <View style={[styles.header, { backgroundColor: colors.headerBg, borderBottomColor: colors.headerBorder }]}>
         <Text style={[styles.headerTitle, { color: colors.title }]}>AI News Aggregator</Text>
         <Text style={[styles.headerSub, { color: colors.subtitle }]}>
-          {tab === 'papers' ? 'arxiv.org · cs.AI' : tab === 'news' ? 'Hacker News · AI 相关' : '机器之心 · 量子位'}
+          {tab === 'papers' ? 'arxiv.org · cs.AI' : tab === 'news' ? 'Hacker News · AI 相关' : '36氪 · IT之家'}
         </Text>
       </View>
     );
