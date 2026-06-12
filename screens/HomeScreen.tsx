@@ -173,7 +173,7 @@ export default function HomeScreen() {
       <View style={[styles.header, { backgroundColor: colors.headerBg, borderBottomColor: colors.headerBorder }]}>
         <Text style={[styles.headerTitle, { color: colors.title }]}>AI News Aggregator</Text>
         <Text style={[styles.headerSub, { color: colors.subtitle }]}>
-          {tab === 'papers' ? `arxiv.org · ${paperCategory}` : tab === 'news' ? 'The Verge · Ars · Engadget' : '36氪 · IT之家'}
+          {tab === 'papers' ? `arxiv.org · ${paperCategory}` : tab === 'news' ? 'The Verge · HN' : '36氪 · IT之家'}
         </Text>
       </View>
     );

@@ -1,9 +1,9 @@
 # Mobile_Dev — 需求文档
 
 > React Native (Expo) + TypeScript 移动端开发
-> 创建：2026-06-13 | 状态：V2 + EAS 构建中
+> 创建：2026-06-13 | 状态：V3 三 Tab + 分类切换
 
-## 当前阶段：等待首次 APK，待真机安装验证
+## 当前阶段：核心功能完成，新闻源质量待优化
 
 ### F0: 开发环境
 
@@ -25,13 +25,15 @@
 - [x] 深色模式（ThemeContext + useColorScheme 自动跟随系统）
 - [x] AsyncStorage 本地缓存（离线降级）
 - [x] TypeScript 零错误编译
-- [x] EAS 云构建 APK（首次构建排队中）
-- [ ] APK 安装到真机验证
+- [x] APK 真机验证通过（论文 + 新闻 + 中文）
+- [x] 论文分类切换（AI/CV/NLP/ML/Robotics）
+- [ ] ⚠️ 中文新闻源质量差（36氪 AI 文章极少）
+- [ ] ⚠️ 英文新闻源少（仅 The Verge + HN）
 
 ### F2: 后续迭代
 
+- [ ] 丰富新闻源（中文 + 英文）
 - [ ] 书签 / 收藏
-- [ ] 多数据源（NewsAPI、HN）
 - [ ] 搜索 / 按日期筛选
 
 ## 非功能约束

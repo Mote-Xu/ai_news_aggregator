@@ -18,38 +18,35 @@
 
 ## 当前状态
 
-- ✅ Expo TypeScript 项目已创建
-- ✅ AI News Aggregator V2 实现完成（arxiv API + FlatList + 深色模式 + 详情弹窗）
+- ✅ AI News Aggregator V3：三 Tab + 分类切换
 - ✅ TypeScript 零编译错误
-- ✅ Metro Bundler + Expo Go 扫码调试已跑通
-- ✅ GitHub 仓库：Mote-Xu/ai_news_aggregator
-- ✅ EAS 云构建配置（preview APK）+ GitHub Actions 手动触发
-- 🔄 首次 EAS 云构建排队中
+- ✅ Expo Go 扫码调试 + EAS APK 真机验证均通过
+- ✅ GitHub: Mote-Xu/ai_news_aggregator + GitHub Actions 手动构建
 - ❌ Node 版本警告未消除
+- ⚠️ 新闻源质量待优化（见下方卡点）
 
-## 已实现功能（V2）
+## 已实现功能（V3）
 
-1. 从 `http://export.arxiv.org/api/query` 拉取 cs.AI 最新 20 篇论文
-2. 手工 XML 解析（用正则提取 entry 块）
-3. FlatList 卡片式列表（标题 / 作者 / 日期 / 摘要截断）
-4. 下拉刷新（RefreshControl）
-5. **详情弹窗**（Modal）展示完整摘要、全部作者、arXiv ID + "在 arXiv 中打开"按钮
-6. **深色/浅色模式**：ThemeContext + useColorScheme 自动跟随系统
-7. AsyncStorage 缓存上次数据（网络失败时展示缓存）
-8. 加载中 / 错误 / 空数据三态 UI
+1. **三 Tab 聚合**：📄 论文 (arxiv) | 📰 新闻 (The Verge + HN) | 🇨🇳 中文 (36氪)
+2. **论文分类切换**：AI / CV / NLP / ML / Robotics，动态切换 arxiv API
+3. FlatList + 下拉刷新 + 三 Tab 独立 AsyncStorage 缓存
+4. **详情弹窗**（Modal）完整摘要/作者/arXiv ID + "在 arXiv 中打开"
+5. **深色模式**：ThemeContext + useColorScheme 自动跟随
+6. XML/RSS 手写正则解析 + 15-20s fetch 超时
 
 ## 项目结构
 
 ```
-.github/workflows/eas-build.yml  # GitHub Actions 手动触发 EAS 构建
-eas.json                          # EAS 构建配置（preview = APK）
-contexts/ThemeContext.tsx          # ThemeProvider + useTheme（深色/浅色调色板）
-types/arxiv.ts                     # ArxivEntry 接口
-services/arxivApi.ts               # fetch + XML 解析 + 日期格式化
-components/NewsCard.tsx            # 新闻卡片组件（主题感知）
-components/PaperModal.tsx          # 论文详情弹窗
-screens/HomeScreen.tsx             # 主页面（FlatList + useState/useEffect/Modal）
-App.tsx                            # 入口 → ThemeProvider + StatusBar + HomeScreen
+.github/workflows/eas-build.yml
+eas.json
+contexts/ThemeContext.tsx          # 主题 Context
+types/arxiv.ts, news.ts
+services/arxivApi.ts               # arxiv + 分类参数
+services/newsApi.ts                # The Verge RSS + HN JSON
+services/chineseNewsApi.ts         # 36氪 RSS + AI 过滤
+components/NewsCard.tsx, NewsItemCard.tsx, PaperModal.tsx
+screens/HomeScreen.tsx             # 三 Tab 页面
+App.tsx
 ```
 
 ## 部署说明
@@ -73,8 +70,8 @@ App.tsx                            # 入口 → ThemeProvider + StatusBar + Home
 - 无 Java / Kotlin / Android 原生开发经验
 - 无 React 经验（边写边学）
 
-## 当前卡点 & 请 AI 给方向
+## ⚠️ 当前卡点（请给方向）
 
-1. **首次 APK 安装**：EAS 构建完成后在 HarmonyOS 真机上安装验证
-2. **Node 升级**：EBADENGINE 警告——建议直接升 22.x LTS 还是 20.19.4？不影响开发但影响构建速度
-3. **下一个迭代方向**：书签收藏 / 多数据源 / 搜索筛选，先做哪个？
+1. **中文新闻源**：36氪 RSS 是通用科技媒体，AI 文章极少（过滤后只有 3 篇，且无浏览量）。试过 机器之心、量子位 RSS，国内不通或已废弃。**还有什么国内可用的 AI 新闻源？**
+2. **英文新闻源**：目前只有 The Verge AI（Atom 格式，OK）+ HN（JSON fallback）。试过 Ars Technica、Engadget RSS 2.0，解析器报 Uncaught Error。**怎么稳定解析不同 RSS 格式？或者有其他国内能通的英文 AI 新闻 API？**
+3. **Node 升级**：EBADENGINE 警告——直接升 22.x LTS？

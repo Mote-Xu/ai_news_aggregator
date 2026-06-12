@@ -20,14 +20,18 @@ Mobile_Dev/
 ├── contexts/
 │   └── ThemeContext.tsx     # 深色/浅色主题 Context + useTheme
 ├── types/
-│   └── arxiv.ts            # ArxivEntry 类型定义
+│   ├── arxiv.ts            # ArxivEntry 类型定义
+│   └── news.ts             # RedditPost（复用为通用新闻条目）
 ├── services/
-│   └── arxivApi.ts         # arxiv API 获取 + XML 解析
+│   ├── arxivApi.ts         # arxiv API + XML 解析 + 分类切换
+│   ├── newsApi.ts          # 英文新闻（The Verge RSS + HN JSON fallback）
+│   └── chineseNewsApi.ts   # 中文新闻（36氪 RSS + AI 关键词过滤）
 ├── components/
-│   ├── NewsCard.tsx        # 新闻卡片组件（主题感知）
+│   ├── NewsCard.tsx        # 论文卡片（主题感知）
+│   ├── NewsItemCard.tsx    # 新闻卡片（通用）
 │   └── PaperModal.tsx      # 论文详情弹窗（Modal）
 ├── screens/
-│   └── HomeScreen.tsx      # 主列表页（FlatList + 状态管理）
+│   └── HomeScreen.tsx      # 三 Tab 主页面（论文/新闻/中文）
 ├── CLAUDE.md                # 本文件
 ├── REQUIREMENTS.md          # 需求文档
 └── Mobile_Dev_GEMINI_PROMPT.md  # 给外部 AI 的总结
@@ -69,11 +73,12 @@ npx eas build --platform android --profile preview
 
 ## 当前功能
 
-- **AI News Aggregator**：从 arxiv.org (cs.AI) 拉取最新 AI 论文
+- **三 Tab 聚合**：📄 论文 (arxiv) | 📰 新闻 (The Verge + HN) | 🇨🇳 中文 (36氪)
+- **论文分类切换**：AI / CV / NLP / ML / Robotics 五分类
 - FlatList 列表展示、下拉刷新
-- **详情弹窗**（Modal）展示完整摘要、作者、arXiv ID，点击按钮打开原文
+- **详情弹窗**（Modal）展示完整摘要、作者、arXiv ID，点击打开原文
 - **深色模式**：ThemeContext + useColorScheme 自动跟随系统
-- AsyncStorage 本地缓存（离线也能看到上次数据）
+- AsyncStorage 本地缓存（三 Tab 独立缓存）
 - TypeScript 严格模式，零编译错误
 
 ## 调试方式
@@ -114,5 +119,6 @@ npx eas build --platform android --profile preview
 - [x] 详情弹窗（Modal 替代浏览器跳转）
 - [x] EAS 云构建配置（eas.json + APK 构建）
 - [x] GitHub Actions 自动构建 workflow（手动触发）
-- [ ] 下载 APK 安装到手机（首次构建进行中）
-- [ ] 后续：书签收藏 / 多数据源 / 搜索筛选
+- [x] 下载 APK 安装到手机
+- [ ] 当前卡点：中文新闻源质量差（36氪 AI 文章少）；英文源少（仅 The Verge + HN）
+- [ ] 后续：丰富新闻源 / 书签收藏 / 搜索筛选
