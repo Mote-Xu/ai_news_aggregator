@@ -35,8 +35,8 @@ function parseRSS(xml: string, srcUrl: string): RedditPost[] {
     const desc = strip(block.match(/<description>([\s\S]*?)<\/description>/)?.[1] ?? '');
     const pubDate = block.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1]?.trim() ?? '';
 
-    // 只保留 AI 相关文章
-    const isAI = /AI|人工智能|大模型|机器学习|深度学习|算法|智能|模型|算力|英伟达|NVIDIA|OpenAI|ChatGPT|GPT|Claude|Gemini|DeepSeek/i.test(title + desc);
+    // 只保留 AI 相关文章（精准词，避免"智能手机"等误匹配）
+    const isAI = /AI\b|人工智能|大模型|大语言模型|机器学习|深度学习|OpenAI|ChatGPT|GPT-|Claude|Gemini|DeepSeek|Copilot|Midjourney|Stable.Diffusion|算力|英伟达|NVIDIA|GPU|生成式|多模态|Agent|智能体|强化学习/i.test(title);
     if (title && link && isAI) {
       items.push({
         id: link,
