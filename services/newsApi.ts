@@ -12,7 +12,11 @@ function strip(html: string): string {
 // ── RSS 源 ─────────────────────────────────────────
 const RSS_SOURCES = [
   'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml',
+  'https://feeds.arstechnica.com/arstechnica/index',
+  'https://www.engadget.com/rss.xml',
 ];
+
+const AI_RX = /AI\b|artificial.intelligence|OpenAI|ChatGPT|GPT-|Claude|Gemini|DeepSeek|Copilot|LLM|machine.learning|deep.learning|neural.network|transformer|diffusion|NVIDIA|GPU/i;
 
 function parseRSS(xml: string, srcUrl: string): RedditPost[] {
   const itemRegex = /<entry>([\s\S]*?)<\/entry>|<item>([\s\S]*?)<\/item>/g;
@@ -35,13 +39,15 @@ function parseRSS(xml: string, srcUrl: string): RedditPost[] {
       ''
     ).trim();
 
-    if (title && link) {
+    // 通用科技站只保留 AI 相关
+    const isVerge = srcUrl.includes('theverge');
+    if (title && link && (isVerge || AI_RX.test(title + desc))) {
       items.push({
         id: link,
         title,
         body: desc,
         url: link,
-        author: 'The Verge',
+        author: srcUrl.includes('theverge') ? 'The Verge' : srcUrl.includes('arstechnica') ? 'Ars Technica' : 'Engadget',
         score: 0,
         comments: 0,
         created: pubDate || new Date().toISOString(),
