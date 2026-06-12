@@ -10,7 +10,7 @@
 Mobile_Dev/
 ├── .github/workflows/
 │   └── eas-build.yml        # GitHub Actions 手动触发 EAS 构建
-├── App.tsx                  # 应用入口 → ThemeProvider + HomeScreen
+├── App.tsx                  # 应用入口 → ThemeProvider + BookmarkProvider + HomeScreen
 ├── index.ts                 # 注册根组件
 ├── app.json                 # Expo 配置（name: AI News Aggregator, slug: Mobile_Dev）
 ├── eas.json                 # EAS 构建配置（preview = APK）
@@ -18,20 +18,22 @@ Mobile_Dev/
 ├── tsconfig.json            # TypeScript 配置（严格模式）
 ├── assets/                  # 图标等静态资源
 ├── contexts/
-│   └── ThemeContext.tsx     # 深色/浅色主题 Context + useTheme
+│   ├── ThemeContext.tsx     # 深色/浅色主题 Context + useTheme
+│   └── BookmarkContext.tsx  # 书签收藏 Context + AsyncStorage 持久化
 ├── types/
 │   ├── arxiv.ts            # ArxivEntry 类型定义
-│   └── news.ts             # RedditPost（复用为通用新闻条目）
+│   ├── news.ts             # RedditPost（复用为通用新闻条目）
+│   └── bookmark.ts         # BookmarkItem 判别联合类型（paper | news）
 ├── services/
 │   ├── arxivApi.ts         # arxiv API + XML 解析 + 分类切换
-│   ├── newsApi.ts          # 英文新闻（The Verge RSS + HN JSON fallback）
-│   └── chineseNewsApi.ts   # 中文新闻（36氪 RSS + AI 关键词过滤）
+│   ├── newsApi.ts          # 英文新闻（The Verge + Dev.to + HF + HN）
+│   └── chineseNewsApi.ts   # 中文新闻（机器之心/掘金/量子位/新智元 + 36氪/IT之家）
 ├── components/
-│   ├── NewsCard.tsx        # 论文卡片（主题感知）
-│   ├── NewsItemCard.tsx    # 新闻卡片（通用）
+│   ├── NewsCard.tsx        # 论文卡片（主题感知 + ☆ 收藏）
+│   ├── NewsItemCard.tsx    # 新闻卡片（通用 + ☆ 收藏）
 │   └── PaperModal.tsx      # 论文详情弹窗（Modal）
 ├── screens/
-│   └── HomeScreen.tsx      # 三 Tab 主页面（论文/新闻/中文）
+│   └── HomeScreen.tsx      # 四 Tab 主页面（论文/新闻/中文/收藏）
 ├── CLAUDE.md                # 本文件
 ├── REQUIREMENTS.md          # 需求文档
 └── Mobile_Dev_GEMINI_PROMPT.md  # 给外部 AI 的总结
@@ -73,12 +75,13 @@ npx eas build --platform android --profile preview
 
 ## 当前功能
 
-- **三 Tab 聚合**：📄 论文 (arxiv) | 📰 新闻 (The Verge + HN) | 🇨🇳 中文 (36氪)
+- **四 Tab 聚合**：📄 论文 (arxiv) | 📰 新闻 (The Verge + Dev.to + HF + HN) | 🇨🇳 中文 (机器之心/掘金/量子位/新智元 + 36氪/IT之家) | 🔖 收藏
 - **论文分类切换**：AI / CV / NLP / ML / Robotics 五分类
 - FlatList 列表展示、下拉刷新
 - **详情弹窗**（Modal）展示完整摘要、作者、arXiv ID，点击打开原文
 - **深色模式**：ThemeContext + useColorScheme 自动跟随系统
-- AsyncStorage 本地缓存（三 Tab 独立缓存）
+- AsyncStorage 本地缓存（三 Tab 独立缓存 + 书签持久化）
+- **书签收藏**：☆/★ 一键收藏论文/新闻，收藏 Tab 统一查看
 - TypeScript 严格模式，零编译错误
 
 ## 调试方式
@@ -110,7 +113,6 @@ npx eas build --platform android --profile preview
 
 ## 待办
 
-- [ ] 升级 Node.js 到 22.x LTS（当前 20.15.1 能跑但有 EBADENGINE 警告）
 - [x] 手机安装 Expo Go，验证扫码调试 ✅（已跑通）
 - [x] 确定第一个 App 项目方向 → AI News Aggregator
 - [x] 迁移旧 Mobile_Development 目录中的 PhoneCleanup 残留（无残留，跳过）
@@ -120,5 +122,8 @@ npx eas build --platform android --profile preview
 - [x] EAS 云构建配置（eas.json + APK 构建）
 - [x] GitHub Actions 自动构建 workflow（手动触发）
 - [x] 下载 APK 安装到手机
-- [ ] 当前卡点：中文新闻源质量差（36氪 AI 文章少）；英文源少（仅 The Verge + HN）
-- [ ] 后续：丰富新闻源 / 书签收藏 / 搜索筛选
+- [x] 丰富中文新闻源 ✅（RSSHub：机器之心/掘金AI/量子位/新智元，本地 AI 关键词过滤 36氪/IT之家）
+- [x] 丰富英文新闻源 ✅（新增 Dev.to API + Hugging Face Daily Papers，fast-xml-parser 替代手写正则）
+- [x] 书签收藏 ✅（BookmarkContext + ☆/★ 按钮 + 🔖 收藏 Tab）
+- [ ] 升级 Node.js 到 22.x LTS（当前 20.15.1 能跑但有 EBADENGINE 警告）
+- [ ] 后续：搜索 / 按日期筛选

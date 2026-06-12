@@ -18,16 +18,19 @@ import { fetchAINews } from '../services/newsApi';
 import { fetchChineseNews } from '../services/chineseNewsApi';
 import { ArxivEntry } from '../types/arxiv';
 import { RedditPost } from '../types/news';
+import { BookmarkItem } from '../types/bookmark';
 import { useTheme } from '../contexts/ThemeContext';
+import { useBookmarks } from '../contexts/BookmarkContext';
 
 const CACHE_PAPERS = '@cache_papers';
 const CACHE_NEWS = '@cache_news';
 const CACHE_CHINESE = '@cache_chinese';
 
-type Tab = 'papers' | 'news' | 'chinese';
+type Tab = 'papers' | 'news' | 'chinese' | 'bookmarks';
 
 export default function HomeScreen() {
   const { colors } = useTheme();
+  const { bookmarks } = useBookmarks();
   const [tab, setTab] = useState<Tab>('papers');
 
   // Papers
@@ -123,11 +126,25 @@ export default function HomeScreen() {
     Linking.openURL(post.url).catch(() => {});
   }, []);
 
+  // ── Bookmark render helpers ────────────────────
+  const renderBookmarkItem = useCallback(({ item }: { item: BookmarkItem }) => {
+    if (item.type === 'paper') {
+      return <NewsCard entry={item.data} onPress={handlePaperPress} />;
+    }
+    return <NewsItemCard post={item.data} onPress={handleNewsPress} />;
+  }, [handlePaperPress, handleNewsPress]);
+
+  const bookmarkKeyExtractor = useCallback((item: BookmarkItem) => {
+    if (item.type === 'paper') return item.data.id;
+    return item.data.id;
+  }, []);
+
   // ── Tab bar ─────────────────────────────────────
   const TABS: { key: Tab; label: string }[] = [
     { key: 'papers', label: '📄 论文' },
     { key: 'news', label: '📰 新闻' },
     { key: 'chinese', label: '🇨🇳 中文' },
+    { key: 'bookmarks', label: '🔖 收藏' },
   ];
 
   const tabBar = (
@@ -167,18 +184,24 @@ export default function HomeScreen() {
     (tab === 'chinese' && chineseLoading && chinese.length === 0);
   if (isLoading) return loadingView(tab === 'papers' ? '正在获取最新 AI 论文...' : tab === 'news' ? '正在获取 AI 新闻...' : '正在获取中文 AI 动态...');
 
-  // ── Error ───────────────────────────────────────
+  // ── Header ──────────────────────────────────────
   function header() {
+    const subtitle =
+      tab === 'papers' ? `arxiv.org · ${paperCategory}` :
+      tab === 'news' ? 'The Verge · Dev.to · HF · HN' :
+      tab === 'chinese' ? '机器之心 · 掘金 · 量子位 · 新智元' :
+      `已收藏 ${bookmarks.length} 条`;
     return (
       <View style={[styles.header, { backgroundColor: colors.headerBg, borderBottomColor: colors.headerBorder }]}>
         <Text style={[styles.headerTitle, { color: colors.title }]}>AI News Aggregator</Text>
         <Text style={[styles.headerSub, { color: colors.subtitle }]}>
-          {tab === 'papers' ? `arxiv.org · ${paperCategory}` : tab === 'news' ? 'The Verge · HN' : '36氪 · IT之家'}
+          {subtitle}
         </Text>
       </View>
     );
   }
 
+  // ── Error ───────────────────────────────────────
   const errorView = (msg: string) => (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       {header()}
@@ -214,6 +237,17 @@ export default function HomeScreen() {
     </View>
   );
 
+  // ── Bookmarks empty state ───────────────────────
+  const bookmarksEmpty = (
+    <View style={styles.center}>
+      <Text style={styles.errorIcon}>📑</Text>
+      <Text style={[styles.errorText, { color: colors.errorTitle }]}>暂无收藏</Text>
+      <Text style={[styles.errorDetail, { color: colors.errorDetail }]}>
+        在论文或新闻卡片上点击 ☆ 即可收藏
+      </Text>
+    </View>
+  );
+
   // ── Render ──────────────────────────────────────
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
@@ -245,7 +279,7 @@ export default function HomeScreen() {
             }
           />
         )
-      ) : (
+      ) : tab === 'chinese' ? (
         chineseError && chinese.length === 0 ? errorView(chineseError) : (
           <FlatList
             data={chinese}
@@ -255,6 +289,20 @@ export default function HomeScreen() {
             refreshControl={
               <RefreshControl refreshing={chineseLoading} onRefresh={() => loadChinese()} colors={[colors.accent]} tintColor={colors.accent} />
             }
+          />
+        )
+      ) : (
+        // Bookmarks tab
+        bookmarks.length === 0 ? (
+          <View style={[styles.container, { backgroundColor: colors.bg }]}>
+            {bookmarksEmpty}
+          </View>
+        ) : (
+          <FlatList
+            data={bookmarks}
+            renderItem={renderBookmarkItem}
+            keyExtractor={bookmarkKeyExtractor}
+            contentContainerStyle={styles.list}
           />
         )
       )}

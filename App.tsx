@@ -1,5 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
+import { BookmarkProvider } from './contexts/BookmarkContext';
 import HomeScreen from './screens/HomeScreen';
 
 function ThemedApp() {
@@ -7,7 +8,9 @@ function ThemedApp() {
   return (
     <>
       <StatusBar style={colors.statusBar} />
-      <HomeScreen />
+      <BookmarkProvider>
+        <HomeScreen />
+      </BookmarkProvider>
     </>
   );
 }
