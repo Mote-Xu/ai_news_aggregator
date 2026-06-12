@@ -1,7 +1,7 @@
 import { ArxivEntry } from '../types/arxiv';
 
 const ARXIV_API_URL =
-  'http://export.arxiv.org/api/query?search_query=cat:cs.AI&sortBy=submittedDate&sortOrder=descending&max_results=20';
+  'https://export.arxiv.org/api/query?search_query=cat:cs.AI&sortBy=submittedDate&sortOrder=descending&max_results=20';
 
 /** 去除 HTML 标签和多余空白 */
 function stripHtml(html: string): string {
@@ -45,18 +45,27 @@ export function formatDate(iso: string): string {
 
 /** 获取最新 AI 论文 */
 export async function fetchLatestPapers(): Promise<ArxivEntry[]> {
-  const response = await fetch(ARXIV_API_URL);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
 
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  try {
+    const response = await fetch(ARXIV_API_URL, {
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const xml = await response.text();
+    const entries = parseEntries(xml);
+
+    if (entries.length === 0) {
+      throw new Error('未找到论文数据');
+    }
+
+    return entries;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  const xml = await response.text();
-  const entries = parseEntries(xml);
-
-  if (entries.length === 0) {
-    throw new Error('未找到论文数据');
-  }
-
-  return entries;
 }
