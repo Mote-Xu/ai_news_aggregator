@@ -6,9 +6,13 @@ const SOURCES = [
   'https://www.ithome.com/rss/',
 ];
 
-/** 去除 HTML 和多余空白 */
+/** 去除 HTML 标签、CDATA 包裹、多余空白 */
 function strip(html: string): string {
-  return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+  return html
+    .replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1')
+    .replace(/<[^>]*>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function sourceName(url: string): string {
@@ -26,10 +30,10 @@ function parseRSS(xml: string, srcUrl: string): RedditPost[] {
 
   while ((match = itemRegex.exec(xml)) !== null) {
     const block = match[1];
-    const title = strip(block.match(/<title>(.*?)<\/title>/)?.[1] ?? '');
-    const link = block.match(/<link>(.*?)<\/link>/)?.[1]?.trim() ?? '';
-    const desc = strip(block.match(/<description>(.*?)<\/description>/)?.[1] ?? '');
-    const pubDate = block.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] ?? '';
+    const title = strip(block.match(/<title>([\s\S]*?)<\/title>/)?.[1] ?? '');
+    const link = strip(block.match(/<link>([\s\S]*?)<\/link>/)?.[1] ?? '');
+    const desc = strip(block.match(/<description>([\s\S]*?)<\/description>/)?.[1] ?? '');
+    const pubDate = block.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1]?.trim() ?? '';
 
     if (title && link) {
       items.push({
