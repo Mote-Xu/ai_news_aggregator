@@ -59,10 +59,10 @@ export default function HomeScreen() {
   useEffect(() => { loadPapers(); }, [loadPapers]);
 
   // ── News ────────────────────────────────────────
-  const loadNews = useCallback(async (isRefresh = false) => {
+  const loadNews = useCallback(async () => {
     try {
       setNewsError(null);
-      if (isRefresh) setNewsLoading(true);
+      setNewsLoading(true);
       const data = await fetchAINews();
       setNews(data);
       await AsyncStorage.setItem(CACHE_NEWS, JSON.stringify(data));
@@ -78,7 +78,6 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (tab === 'news' && news.length === 0 && !newsLoading && !newsError) {
-      setNewsLoading(true);
       loadNews();
     }
   }, [tab, news.length, newsLoading, newsError, loadNews]);
@@ -119,18 +118,20 @@ export default function HomeScreen() {
   );
 
   // ── Loading ─────────────────────────────────────
-  if (papersLoading && tab === 'papers') {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.bg }]}>
-        {header()}
-        {tabBar}
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.accent} />
-          <Text style={[styles.loadingText, { color: colors.meta }]}>加载中...</Text>
-        </View>
+  const loadingView = (message: string) => (
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+      {header()}
+      {tabBar}
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={colors.accent} />
+        <Text style={[styles.loadingText, { color: colors.meta }]}>{message}</Text>
       </View>
-    );
-  }
+    </View>
+  );
+
+  const isLoading = (tab === 'papers' && papersLoading) ||
+    (tab === 'news' && newsLoading && news.length === 0);
+  if (isLoading) return loadingView(tab === 'papers' ? '正在获取最新 AI 论文...' : '正在获取 AI 新闻...');
 
   // ── Error ───────────────────────────────────────
   function header() {
@@ -138,7 +139,7 @@ export default function HomeScreen() {
       <View style={[styles.header, { backgroundColor: colors.headerBg, borderBottomColor: colors.headerBorder }]}>
         <Text style={[styles.headerTitle, { color: colors.title }]}>AI News Aggregator</Text>
         <Text style={[styles.headerSub, { color: colors.subtitle }]}>
-          {tab === 'papers' ? 'arxiv.org · cs.AI' : 'Reddit · r/artificial+r/MachineLearning'}
+          {tab === 'papers' ? 'arxiv.org · cs.AI' : 'Hacker News · AI 相关'}
         </Text>
       </View>
     );
@@ -171,7 +172,7 @@ export default function HomeScreen() {
             keyExtractor={item => item.id}
             contentContainerStyle={styles.list}
             refreshControl={
-              <RefreshControl refreshing={false} onRefresh={() => {
+              <RefreshControl refreshing={papersLoading} onRefresh={() => {
                 setPapersLoading(true);
                 loadPapers();
               }} colors={[colors.accent]} tintColor={colors.accent} />
