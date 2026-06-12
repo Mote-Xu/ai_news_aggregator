@@ -1,15 +1,17 @@
 {
   "expo": {
-    "name": "Mobile_Dev",
+    "name": "AI News Aggregator",
     "slug": "Mobile_Dev",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.xuzihao.aiarxiv"
     },
     "android": {
+      "package": "com.xuzihao.aiarxiv",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -20,6 +22,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "39233537-bf2e-4baa-9c0a-347a178acb36"
+      }
     }
   }
 }
